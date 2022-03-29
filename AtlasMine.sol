@@ -100,7 +100,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
             (uint256 distributedRewards, uint256 undistributedRewards) = getRealMagicReward(masterOfCoin.requestRewards());
             totalRewardsEarned += distributedRewards;
             totalUndistributedRewards += undistributedRewards;
-            accMagicPerShare += distributedRewards * ONE / lpSupply;
+            accMagicPerShare += distributedRewards * ONE / lpSupply; // distribute reward per 1 Magic power
             emit LogUpdateRewards(distributedRewards, undistributedRewards, lpSupply, accMagicPerShare);
         }
 
@@ -247,6 +247,8 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         }
     }
 
+    /// @notice available withdraw token amount in depositId
+    /// @param
     function calcualteVestedPrincipal(address _user, uint256 _depositId) public view virtual returns (uint256 amount) {
         UserInfo storage user = userInfo[_user][_depositId];
         Lock _lock = user.lock;
@@ -257,7 +259,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         if (block.timestamp >= vestingEnd || unlockAll) {
             amount = user.originalDepositAmount;
         } else if (block.timestamp > user.vestingLastUpdate) {
-            amount = user.originalDepositAmount * (block.timestamp - user.vestingLastUpdate) / (vestingEnd - vestingBegin);
+            amount = user.originalDepositAmount * (block.timestamp - user.vestingLastUpdate) / (vestingEnd - vestingBegin);   
         }
     }
 
@@ -280,6 +282,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         }
     }
 
+    //@notice: lpAmount - magic power, consider boosting effect
     function deposit(uint256 _amount, Lock _lock) public virtual updateRewards {
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
         (uint256 lockBoost, uint256 timelock) = getLockBoost(_lock);
@@ -642,7 +645,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
             boost = 64e15;
         } else if (_tokenId == 133) { // Red Rupee 0.8%
             boost = 8e15;
-        } =if (_tokenId == 141) { // Score of Ivory 6%
+        } else if (_tokenId == 141) { // Score of Ivory 6%
             boost = 60e15;
         } else if (_tokenId == 151) { // Silver Coin 0.8%
             boost = 8e15;
