@@ -54,7 +54,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
     uint256 public totalRewardsEarned;
     uint256 public totalUndistributedRewards;
     uint256 public accMagicPerShare;
-    uint256 public totalLpToken;
+    uint256 public totalLpToken; // used in updateRewards()
     uint256 public magicTotalDeposits;
 
     uint256 public utilizationOverride;
@@ -140,6 +140,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         override(ERC1155ReceiverUpgradeable, AccessControlEnumerableUpgradeable)
         returns (bool)
     {
+        // AccessControlEnumerableUpgradeable's supportsInterface(interfaceId) is called
         return super.supportsInterface(interfaceId);
     }
 
@@ -268,6 +269,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         uint256 _accMagicPerShare = accMagicPerShare;
         uint256 lpSupply = totalLpToken;
 
+        // emmision 비율을 고려하여 전체 분배하는 
         (uint256 distributedRewards,) = getRealMagicReward(masterOfCoin.getPendingRewards(address(this)));
         _accMagicPerShare += distributedRewards * ONE / lpSupply;
 
@@ -287,13 +289,17 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
         (uint256 lockBoost, uint256 timelock) = getLockBoost(_lock);
         uint256 nftBoost = boosts[msg.sender];
+        // e.g., 100 + 100 * (10e16 + 50e16) / 1e18
+        // 소수를 '표현' 할 때 fload이나 double같은걸 안쓰고,
+        // 1e18을 1로 가정한다.
+        // 따라서 아래와 같이 '계산'과 함께 쓰일때는 '/ ONE' 이 필요함
         uint256 lpAmount = _amount + _amount * (lockBoost + nftBoost) / ONE;
         magicTotalDeposits += _amount;
         totalLpToken += lpAmount;
 
         user.originalDepositAmount = _amount;
         user.depositAmount = _amount;
-        user.lpAmount = lpAmount;
+        user.lpAmount = lpAmount; // magic power
         user.lockedUntil = block.timestamp + timelock;
         user.vestingLastUpdate = user.lockedUntil;
         user.rewardDebt = (lpAmount * accMagicPerShare / ONE).toInt256();
@@ -408,7 +414,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         emit Staked(treasure, _tokenId, _amount, boosts[msg.sender]);
     }
 
-    function unstakeTreasure(uint256 _tokenId, uint256 _amount) external virtual updateRewards {
+    function unstakeTreasure(uint256 _tokenId, uint256 _amount) external virtual pdateRewards {
         require(treasure != address(0), "Cannot stake Treasure");
         require(_amount > 0, "Amount is 0");
         require(treasureStaked[msg.sender][_tokenId] >= _amount, "Withdraw amount too big");
